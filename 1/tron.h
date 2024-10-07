@@ -46,6 +46,7 @@ typedef  enum {
 	ACTION_BRANCHZERO,
 	ACTION_SWAP,
 	ACTION_HALT,
+	ACTION_UNKNOWN
 } SMPL_ACTION;
 
 struct simpletron* init_simpletron(const int pages_size, const int words_size, const int word_size);
@@ -56,7 +57,8 @@ void tron_resize_value(unsigned char* dest, const unsigned char* src, const int 
 void tron_resize_unsigned_to_signed(unsigned char* dest, const unsigned char* src, const int current_size, const int new_size);
 void parse_instruct(struct simpletron* self, unsigned char* instruct);
 int char_to_int_n(unsigned char* chars, int size);
-unsigned char* tron_get_from_reg(struct simpletron* self, unsigned char* reg);
+unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* dest, int dest_size);
+unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg);
 
 void tron_read(struct simpletron* self);
 void tron_load(struct simpletron* self);

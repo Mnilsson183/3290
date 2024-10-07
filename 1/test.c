@@ -17,14 +17,12 @@ void test_tron_move(void) {
     assertStringNEqual((char*)buf, (char*)tron->index_reg, tron->word_size, "Setting a value into the index register");
 
     tron_free(tron);
-    allTestsPassing("Move");
 }
 
 void test_tron_move_n(void) {
     printTestingSegment("Tron Move N");
     //struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
 
-    allTestsPassing("Tron Move N");
 }
 
 void test_tron_resize_value() {
@@ -38,7 +36,6 @@ void test_tron_resize_value() {
     tron_resize_value(dest, src, 4, 7);
     assertStringNEqual((const char*)dest, "-000102", 7,"Resizing a value that has a sign");
 
-    allTestsPassing("Resize values");
 }
 
 void test_tron_resize_unsigned_to_signed(void) {
@@ -49,7 +46,6 @@ void test_tron_resize_unsigned_to_signed(void) {
     tron_resize_unsigned_to_signed(dest, src, 3, 7);
     assertStringNEqual((const char*)dest, "+000234", 7,"Resizing a value that has no sign");
 
-    allTestsPassing("Resize unsigned to signed");
 }
 
 void test_parse_instruct(void) {
@@ -60,7 +56,6 @@ void test_parse_instruct(void) {
     assertStringNEqual((char *)tron->operand, "1221", 4, "Parsing Instruction can parse the operand");
 
     tron_free(tron);
-    allTestsPassing("Parse Instructions");
 }
 
 void test_char_to_int_n(void) {
@@ -77,7 +72,15 @@ void test_char_to_int_n(void) {
     val = char_to_int_n((unsigned char *)"-003456", 7);
     assertEquals(-3456, val, "Convert negative chars to an Int with leading zeros");
 
-    allTestsPassing("Chars To Int");
+}
+
+void test_int_to_chars_known_size(void) {
+    printTestingSegment("int to chars known size");
+
+    int val = 123;
+    unsigned char* chars = malloc(sizeof(unsigned char) * 7);
+    assertStringNEqual(int_to_chars_known_size(val, 3, chars, 7), "+000123", 7, "You can convert ints to chars");
+
 }
 
 void test_tron_get_from_reg(void) {
@@ -85,23 +88,17 @@ void test_tron_get_from_reg(void) {
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
     // load an adress into the operand
     // page 1 word 3
-    unsigned char* loc = tron_get_from_reg(tron, (unsigned char *)"0103");
+    unsigned char* loc = tron_get_from_word(tron, (unsigned char *)"0103");
     unsigned char* correct = &tron->memory[1][3 * tron->word_size];
     assertPtrEquals(loc, correct, "You can get the memory location of word");
 
 
     tron_free(tron);
-    allTestsPassing("Get Register");
 }
 
 
 //int READ=10 Read a word from the terminal into a location whose address is the operand
-void test_tron_read(void) {
-}
 //int WRITE=11 Write a word from the location whose address is the operand to the terminal
-//void tron_write(struct simpletron* self) {
-//
-//}
 //int LOAD=20 Load a word from the memory location specified by the operand into the accumlator
 void test_tron_load(void) {
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
@@ -155,18 +152,19 @@ void test_tron_store() {
     tron_store(tron);
     unsigned char* mem = (unsigned char*)&tron->memory[1][2 * tron->word_size];
     assertStringNEqual(mem, word, tron->word_size, "You can use the store instruction");
+    tron_free(tron);
 }
 //int STOREIDX=26 store a word from the accumulator into a memory location specified by index register
 void test_tron_storeidx() {
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
     unsigned char* loc = (unsigned char*)"+000102";
     unsigned char* word = (unsigned char*)"-123456";
-    // load loc into operand
     tron_move(tron, tron->index_reg, loc);
     tron_move(tron, tron->accum, word);
     tron_storeidx(tron);
     unsigned char* mem = (unsigned char*)&tron->memory[1][2 * tron->word_size];
     assertStringNEqual(mem, word, tron->word_size, "You can use the storeidx instruction");
+    tron_free(tron);
 }
 //int ADD=30 Add the word in memory whose address is the operand to the accumulator and leave result in accumulator ( ACC += MEM )
 void test_tron_add() {
@@ -251,7 +249,6 @@ void test_tron_instructions(void) {
     //test_tron_branchzero();
     //test_tron_swap();
     //test_tron_halt();
-    allTestsPassing("Insructions");
 }
 
 int main(void) {
@@ -260,7 +257,7 @@ int main(void) {
     test_tron_resize_unsigned_to_signed();
     test_parse_instruct();
     test_char_to_int_n();
+    test_int_to_chars_known_size();
     test_tron_get_from_reg();
     test_tron_instructions();
-    allTestsPassing("Project");
 }

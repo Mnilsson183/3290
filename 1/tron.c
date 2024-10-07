@@ -124,7 +124,24 @@ int char_to_int_n(unsigned char* chars, int size) {
 	return sum;
 }
 
-unsigned char* tron_get_from_reg(struct simpletron* self, size_loc_reg reg) {
+unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* dest, int dest_size) {
+	unsigned char* chars = malloc(sizeof(unsigned char*) * 7);
+	if (val < 0) chars[0] = '-';
+	else chars[0] = '+';
+	int idx = 1;
+
+	while(idx < val_size + 1) {
+		int rem = val % 10;
+		val /= 10;
+		chars[val_size - idx + 1] = rem + '1' - 1;
+		idx++;
+	}
+	tron_resize_value(dest, chars, val_size + 1, dest_size);
+	free(chars);
+	return dest;
+}
+
+unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg) {
 	int page = char_to_int_n(&reg[0], 2);
 	int word = char_to_int_n(&reg[2], 2);
 	return &self->memory[page][word * self->word_size];
@@ -133,7 +150,7 @@ unsigned char* tron_get_from_reg(struct simpletron* self, size_loc_reg reg) {
 // +123456
 
 unsigned char* tron_get_from_oper(struct simpletron* self) {
-	return tron_get_from_reg(self, self->operand);
+	return tron_get_from_word(self, self->operand);
 }
 
 void handle_inst(struct simpletron* self, unsigned char* instr) {
@@ -151,15 +168,15 @@ void tron_print_mem_loc(struct simpletron* self, unsigned char* val) {
 }
 
 
-void tron_dump_page(struct simpletron* self, unsigned char* page) {
+void tron_dump_page(struct simpletron* self, int n) {
 	for (int i = 0; i < self->pages_size; i++) {
-		tron_print_mem_loc(self, &page[i * 3]);
+		tron_print_mem_loc(self, self->memory[n]);
 	}
 }
 
 void tron_dump(struct simpletron* self) {
 	for (int i = 0; i < self->pages_size; i++) {
-		tron_dump_page(self, self->memory[i]);
+		tron_dump_page(self, i);
 	}
 }
 
@@ -196,7 +213,7 @@ void tron_loadx(struct simpletron* self) {
 }
 //int LOADIDX=22 Load word from the memory location specified by index register into accumulator
 void tron_loadidx(struct simpletron* self) {
-	tron_move(self, self->accum, tron_get_from_reg(self, self->index_reg));
+	tron_move(self, self->accum, tron_get_from_word(self, self->index_reg));
 }
 //int STORE=25 Store a word from the acccumulator into the memory location specified by the operand
 void tron_store(struct simpletron* self) {
@@ -205,7 +222,7 @@ void tron_store(struct simpletron* self) {
 //int STOREIDX=26 store a word from the accumulator into a memory location specified by index register
 void tron_storeidx(struct simpletron* self) {
 	// reading a memory location 4 from a 7 register
-	tron_move(self, self->accum, tron_get_from_reg(self, &self->index_reg[0]));
+	tron_move(self, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 }
 //int ADD=30 Add the word in memory whose address is the operand to the accumulator and leave result in accumulator ( ACC += MEM )
 //void tron_add(struct simpletron* self) {
@@ -261,9 +278,16 @@ void tron_branchzero(struct simpletron* self) {
 }
 //int SWAP=43 swap contents of index register and accumulator
 void tron_swap(struct simpletron* self) {
-
+	unsigned char* tmp = malloc(sizeof(unsigned char) * 7);
+	tron_move(self, tmp, self->index_reg);
+	tron_move(self, self->index_reg, self->accum);
+	tron_move(self, self->accum, tmp);
 }
 //int HALT=45 halt program dump register values and a range of pages. The starting page of the range is stored as the top 2 digits of the operand and the last page as the least significant 2 digits( core dump ).
 void tron_halt(struct simpletron* self) {
-
+	int low = char_to_int_n(&self->operand[0], 2);
+	int high = char_to_int_n(&self->operand[2], 2);
+	for (int i = low; i < high + 1; i++) {
+		tron_dump_page(self, i);
+	}
 }
