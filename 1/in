@@ -1,0 +1,10 @@
+; r = x - (-y + z)
+
+mov eax, x
+mov ebx, y
+mov ecx, z
+
+neg ebx
+add ebx, ecx
+neg ebx
+add eax, ebx
