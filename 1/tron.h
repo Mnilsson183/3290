@@ -20,6 +20,7 @@ typedef enum{
 	TRON_RECOVERABLE_ERROR,
 } Simpletron_status;
 
+// pages 0 + 1 are instruction memory
 struct simpletron {
 	size_word_reg* memory;
 	u_int8_t pages_size;

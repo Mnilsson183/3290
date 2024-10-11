@@ -49,8 +49,6 @@ void tron_free(struct simpletron* self) {
 	free(self);
 }
 
-
-
 void tron_set_flag(struct simpletron* self, int flag) {
 	self->flags = self->flags | 1 << flag;
 }
