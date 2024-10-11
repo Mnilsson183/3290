@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <sys/_types/_u_int16_t.h>
+#include <sys/_types/_u_int8_t.h>
 
 #ifndef TRON_H
 #define TRON_H
@@ -8,6 +10,15 @@ typedef unsigned char* size_4_reg;
 typedef unsigned char* size_word_reg;
 typedef unsigned char* size_loc_reg;
 
+typedef u_int8_t* bin;
+typedef char* hex;
+
+typedef enum{
+	TRON_OK,
+	TRON_FATAL_ERROR,
+	TRON_WARNING,
+	TRON_RECOVERABLE_ERROR,
+} Simpletron_status;
 
 struct simpletron {
 	size_word_reg* memory;
@@ -20,7 +31,26 @@ struct simpletron {
 	size_word_reg index_reg;
 	size_2_reg opCode;
 	size_4_reg operand;
+	Simpletron_status status;
+	char* status_msg;
+	u_int16_t flags;
 };
+
+//Bit #	Mask	Abbreviation	Description	Category	=1	=0
+//0	0x0001	CF	Carry flag	Status	CY (Carry)	NC (No Carry)
+//1	0x0002	—	Reserved, always 1 in EFLAGS[2][3]	—
+//2	0x0004	PF	Parity flag	Status	PE (Parity Even)	PO (Parity Odd)
+//3	0x0008	—	Reserved[3]	—
+//4	0x0010	AF	Auxiliary Carry flag[4]	Status	AC (Auxiliary Carry)	NA (No Auxiliary Carry)
+//5	0x0020	—	Reserved[3]	—
+//6	0x0040	ZF	Zero flag	Status	ZR (Zero)	NZ (Not Zero)
+//7	0x0080	SF	Sign flag	Status	NG (Negative)	PL (Positive)
+//8	0x0100	TF	Trap flag (single step)	Control
+//9	0x0200	IF	Interrupt enable flag	Control	EI (Enable Interrupt)	DI (Disable Interrupt)
+//10	0x0400	DF	Direction flag	Control	DN (Down)	UP (Up)
+//11	0x0800	OF	Overflow flag	Status	OV (Overflow)	NV (Not Overflow)
+//14	0x4000	NT	Nested task flag (286+ only),
+//always 1 on 8086 and 186	System
 
 typedef  enum {
 	ACTION_READ = 10,
@@ -71,5 +101,11 @@ void tron_add(struct simpletron* self);
 void tron_addx(struct simpletron* self);
 void tron_subtract(struct simpletron* self);
 void tron_subtractx(struct simpletron* self);
+
+unsigned char* tron_add_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
+unsigned char* tron_sub_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
+unsigned char* tron_mul_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
+unsigned char* tron_mod_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
+unsigned char* tron_div_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
 
 #endif

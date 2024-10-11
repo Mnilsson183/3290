@@ -81,6 +81,9 @@ void test_int_to_chars_known_size(void) {
     unsigned char* chars = malloc(sizeof(unsigned char) * 7);
     assertStringNEqual(int_to_chars_known_size(val, 3, chars, 7), "+000123", 7, "You can convert ints to chars");
 
+    val = -123;
+    assertStringNEqual(int_to_chars_known_size(val, 3, chars, 7), "-000123", 7, "You can convert ints to chars");
+
 }
 
 void test_tron_get_from_reg(void) {
@@ -168,6 +171,12 @@ void test_tron_storeidx() {
 }
 //int ADD=30 Add the word in memory whose address is the operand to the accumulator and leave result in accumulator ( ACC += MEM )
 void test_tron_add() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move_n(tron->operand, "0102", 4);
+    tron_move(tron, &tron->memory[1][2], "+111111");
+    tron_move(tron, tron->accum, "+222222");
+    tron_add(tron);
+    assertStringNEqual(tron->accum, "+333333", tron->word_size, "You can add two values");
 }
 //int ADDX=31 Add a word in memory whose address is stored in index register to the accumulator and leave result in accumulator
 void test_tron_addx() {
@@ -226,6 +235,44 @@ void test_tron_halt() {
 
 }
 
+void test_tron_add_words(void) {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    char* src1 = "+121212";
+    char* src2 = "+343434";
+    char buf[7];
+    tron_add_words(tron, src1, src2, buf);
+    assertStringNEqual(buf, "+464646", tron->word_size, "Adding helper function works");
+    src2 = "-343434";
+    tron_add_words(tron, src1, src2, buf);
+    assertStringNEqual(buf, "-222222", tron->word_size, "You can add a positive and negative to get a negative");
+}
+
+void test_tron_sub_words(void) {
+
+}
+
+void test_tron_mul_words(void) {
+
+}
+
+void test_tron_div_words(void) {
+
+}
+
+void test_tron_mod_words(void) {
+
+}
+
+void test_tron_arithm() {
+    printTestingSegment("Test Tron Arithmetic");
+
+    test_tron_add_words();
+    test_tron_sub_words();
+    test_tron_mul_words();
+    test_tron_div_words();
+    test_tron_mod_words();
+}
+
 void test_tron_instructions(void) {
     printTestingSegment("Instructions");
     test_tron_load();
@@ -234,7 +281,7 @@ void test_tron_instructions(void) {
     test_tron_loadidx();
     test_tron_store();
     test_tron_storeidx();
-    //test_tron_add();
+    test_tron_add();
     //test_tron_addx();
     //test_tron_subtract();
     //test_tron_subtractx();
@@ -259,5 +306,6 @@ int main(void) {
     test_char_to_int_n();
     test_int_to_chars_known_size();
     test_tron_get_from_reg();
+    test_tron_arithm();
     test_tron_instructions();
 }

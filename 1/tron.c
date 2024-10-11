@@ -9,12 +9,9 @@
 
 #define INT_LENGTH(x) ((x) == 0 ? 1 : (int)(log10(abs(x)) + 1))
 
-#define INT_TO_CHARS(num, chars) snprintf(chars, sizeof(chars), "%d", num)
-
 #define OP(op, i1, i2) i1 op i2
 
-#define OPERATE(op, c1, c2, s1, s2, dst) INT_TO_CHARS(OP(op, chars_to_int_n(c1, s1), chars_to_int_n(c2, s2)), dst)
-
+void tron_handle_error(struct simpletron* self);
 
 struct simpletron* init_simpletron(const int pages_size, const int words_size, const int word_size) {
 	struct simpletron* tron = malloc(sizeof(struct simpletron));
@@ -35,6 +32,7 @@ struct simpletron* init_simpletron(const int pages_size, const int words_size, c
 
 	tron->opCode = (unsigned char*)calloc(1, 2);
 	tron->operand = (unsigned char*)calloc(1, 4);
+	tron->flags = 0;
 	return tron;
 }
 
@@ -50,6 +48,47 @@ void tron_free(struct simpletron* self) {
 	free(self->index_reg);
 	free(self);
 }
+
+
+
+void tron_set_flag(struct simpletron* self, int flag) {
+	self->flags = self->flags | 1 << flag;
+}
+
+void tron_toggle_flag(struct simpletron* self, int flag) {
+	self->flags = self->flags ^ 1 << flag;
+}
+
+void tron_clear_flag(struct simpletron* self, int flag) {
+	self->flags = self->flags & ~(1 << flag);
+}
+
+int tron_get_flag(struct simpletron* self, int flag) {
+	return self->flags & 1 << flag;
+}
+
+bin int_to_bin(int val, int* size) {
+	int buf[256];
+	u_int8_t idx = 0;
+	if (val < 0) return NULL;
+	while(val != 0) {
+		buf[idx] = val % 2;
+		val = val / 2;
+		idx++;
+	}
+	u_int8_t* ints = malloc(sizeof(u_int8_t) * idx);
+	for (int i = idx; i >= 0; i--) {
+		ints[i] = buf[idx - i];
+	}
+	*size = idx;
+	return ints;
+}
+
+hex bin_to_hex(int* bin, int bin_size) {
+	int hex_size = bin_size % 4;
+	char* hex = malloc(sizeof(char) * hex_size);
+}
+
 
 void tron_move(struct simpletron* self, unsigned char* dest, const unsigned char* src) {
 	for (int i = 0; i < self->word_size; i++) {
@@ -99,9 +138,14 @@ void tron_resize_unsigned_to_signed(unsigned char* dest, const unsigned char* sr
 	}
 }
 
-void read_instr_set(const char* filename) {
+void load_instr_set(struct simpletron* self, const char* filename) {
 	if (filename == NULL) return;
-	//FILE* f = fopen(filename, "r");
+	FILE* f = fopen(filename, "r");
+	char buf[7];
+	self->instr_counter = 0;
+	while(fgets(buf, sizeof(buf), f)) {
+		tron_move(self, &self->memory[self->instr_counter / 100][self->instr_counter % 100], (unsigned char*)buf);
+	}
 }
 
 void parse_instruct(struct simpletron* self, unsigned char instruct[]) {
@@ -130,6 +174,7 @@ unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* des
 	else chars[0] = '+';
 	int idx = 1;
 
+	val = abs(val);
 	while(idx < val_size + 1) {
 		int rem = val % 10;
 		val /= 10;
@@ -147,17 +192,57 @@ unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg) {
 	return &self->memory[page][word * self->word_size];
 }
 
-// +123456
-
 unsigned char* tron_get_from_oper(struct simpletron* self) {
 	return tron_get_from_word(self, self->operand);
 }
 
-void handle_inst(struct simpletron* self, unsigned char* instr) {
+void exec_inst(struct simpletron* self, unsigned char* instr) {
 	parse_instruct(self, instr);
 	//switch ((SMPL_ACTION)char_to_int_n(self->opCode[0], 2)) {
 	//
 	//}
+	if (self->status_msg != TRON_OK) tron_handle_error(self);
+}
+
+unsigned char* tron_add_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+	int i1 = char_to_int_n(c1, self->word_size);
+	int i2 = char_to_int_n(c2, self->word_size);
+	int res = OP(+, i1, i2);
+	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
+}
+unsigned char* tron_sub_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+	int i1 = char_to_int_n(c1, self->word_size);
+	int i2 = char_to_int_n(c2, self->word_size);
+	int res = OP(-, i1, i2);
+	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
+}
+unsigned char* tron_mul_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+	int i1 = char_to_int_n(c1, self->word_size);
+	int i2 = char_to_int_n(c2, self->word_size);
+	int res = OP(*, i1, i2);
+	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
+}
+unsigned char* tron_mod_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+	int i1 = char_to_int_n(c1, self->word_size);
+	int i2 = char_to_int_n(c2, self->word_size);
+	if (i2 == 0) {
+		self->status = TRON_FATAL_ERROR;
+		self->status_msg = "Divide by zero";
+		return NULL;
+	}
+	int res = OP(%, i1, i2);
+	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
+}
+unsigned char* tron_div_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+	int i1 = char_to_int_n(c1, self->word_size);
+	int i2 = char_to_int_n(c2, self->word_size);
+	if (i2 == 0) {
+		self->status = TRON_FATAL_ERROR;
+		self->status_msg = "Divide by zero";
+		return NULL;
+	}
+	int res = OP(/, i1, i2);
+	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
 
 void tron_print_mem_loc(struct simpletron* self, unsigned char* val) {
@@ -187,17 +272,32 @@ void tron_terminate(const char* msg, int errorCode, struct simpletron* tron) {
 	exit(errorCode);
 }
 
+void tron_handle_error(struct simpletron* self) {
+	Simpletron_status error = self->status;
+	switch (error) {
+		case TRON_OK: return; // should never happen
+		case TRON_FATAL_ERROR:
+			tron_terminate("Fatal Error", TRON_FATAL_ERROR, self); return;
+		case TRON_WARNING:
+			printf("Warning: %s", self->status_msg == NULL ? "Unknown" : self->status_msg);
+			return;
+		case TRON_RECOVERABLE_ERROR:
+			printf("Recoverable Error: %s", self->status_msg == NULL ? "Unknown" : self->status_msg);
+			return;
+	}
+}
+
 // --------------------------------INSTRUCTION-------------------------------//
 
 
 //int READ=10 Read a word from the terminal into a location whose address is the operand
-void tron_read(struct simpletron* self) {
-	tron_print_mem_loc(self, tron_get_from_oper(self));
-}
-//int WRITE=11 Write a word from the location whose address is the operand to the terminal
-//void tron_write(struct simpletron* self) {
-//
+//void tron_read(struct simpletron* self) {
 //}
+//int WRITE=11 Write a word from the location whose address is the operand to the terminal
+void tron_write(struct simpletron* self) {
+	tron_print_mem_loc(self, tron_get_from_oper(self));
+
+}
 //int LOAD=20 Load a word from the memory location specified by the operand into the accumlator
 void tron_load(struct simpletron* self) {
 	tron_move(self, self->accum, tron_get_from_oper(self));
@@ -225,9 +325,11 @@ void tron_storeidx(struct simpletron* self) {
 	tron_move(self, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 }
 //int ADD=30 Add the word in memory whose address is the operand to the accumulator and leave result in accumulator ( ACC += MEM )
-//void tron_add(struct simpletron* self) {
-//	OPERATE(+, self->accum, tron_get_oper(self), MEM_SIZE, 4, self->accum);
-//}
+void tron_add(struct simpletron* self) {
+	int i1 = char_to_int_n(self->accum, self->word_size);
+	int i2 = char_to_int_n(tron_get_from_word(self, self->operand), self->word_size);
+	tron_add_words(self, tron_get_from_word(self, self->operand), self->accum, self->accum);
+}
 //int ADDX=31 Add a word in memory whose address is stored in index register to the accumulator and leave result in accumulator
 void tron_addx(struct simpletron* self) {
 
