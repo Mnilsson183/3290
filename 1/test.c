@@ -85,7 +85,6 @@ void test_int_to_chars_known_size(void) {
     assertStringNEqual(int_to_chars_known_size(val, 3, chars, 7), "-000123", 7, "You can convert ints to chars");
 
 }
-
 void test_tron_get_from_reg(void) {
     printTestingSegment("Get From memory from Register");
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
@@ -173,45 +172,104 @@ void test_tron_storeidx() {
 void test_tron_add() {
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
     tron_move_n(tron->operand, "0102", 4);
-    tron_move(tron, &tron->memory[1][2], "+111111");
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+111111");
     tron_move(tron, tron->accum, "+222222");
     tron_add(tron);
     assertStringNEqual(tron->accum, "+333333", tron->word_size, "You can add two values");
+    tron_free(tron);
 }
 //int ADDX=31 Add a word in memory whose address is stored in index register to the accumulator and leave result in accumulator
 void test_tron_addx() {
-
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+111111");
+    tron_move(tron, tron->accum, "+222222");
+    tron_addx(tron);
+    assertStringNEqual(tron->accum, "+333333", tron->word_size, "You can addx two values");
+    tron_free(tron);
 }
 //int SUBTRACT=32 Subtract a word whose address stored in the operand from the accumulator and leave result in accumulator ( ACC -= MEM )
 void test_tron_subtract() {
 
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move_n(tron->operand, "0102", 4);
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+111111");
+    tron_move(tron, tron->accum, "+222222");
+    tron_subtract(tron);
+    assertStringNEqual(tron->accum, "-111111", tron->word_size, "You can sub two values");
+    tron_free(tron);
 }
 //int SUBTRACTX=33 Subtract a word whose address is stored in the index register from the accumulator and leave result in accumulator
 void test_tron_subtractx() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+333333");
+    tron_move(tron, tron->accum, "+222222");
+    tron_subtractx(tron);
+    assertStringNEqual(tron->accum, "+111111", tron->word_size, "You can subx two values");
+    tron_free(tron);
 
 }
 //int DIVIDE=34 Divide the accumulator by a word whose address stored in the operand and leave result in accumulator and lose the remainder.( ACC /= MEM )
 void tron_tron_divide() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move_n(tron->operand, "0102", 4);
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+222222");
+    tron_move(tron, tron->accum, "+000002");
+    tron_divide(tron);
+    assertStringNEqual(tron->accum, "+111111", tron->word_size, "You can div two values");
+    tron_free(tron);
 
 }
 //int DIVIDEX=35 Divide the accumulator by a word whose address is stored in the index register and leave result in accumulator and lose the remainder.
 void test_tron_dividex() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+222222");
+    tron_move(tron, tron->accum, "+000002");
+    tron_dividex(tron);
+    assertStringNEqual(tron->accum, "+111111", tron->word_size, "You can divx two values");
+    tron_free(tron);
 
 }
 //int MULTIPLY=36 Multiply the accumulator by a word from a specific location in memory and leave result in accumulator ( ACC *= MEM )
 void test_tron_multiply() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move_n(tron->operand, "0102", 4);
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+222222");
+    tron_move(tron, tron->accum, "+000002");
+    tron_multiply(tron);
+    assertStringNEqual(tron->accum, "+444444", tron->word_size, "You can mul two values");
+    tron_free(tron);
 
 }
 //int MULTIPLYX=37 Multiply the accumulator by a word whose address is stored in the index register and leave result in accumulator
 void test_tron_multiplyx() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_move(tron, &tron->memory[1][2 * tron->word_size], "+222222");
+    tron_move(tron, tron->accum, "+000002");
+    tron_multiplyx(tron);
+    assertStringNEqual(tron->accum, "+444444", tron->word_size, "You can mulx two values");
+    tron_free(tron);
 
 }
 //int INC=38 increase index register by 1
 void test_tron_inc() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_inc(tron);
+    assertStringNEqual(tron->index_reg, "+000103", tron->word_size, "You can inc two values");
+    tron_free(tron);
 
 }
 //int DEC=39 decrease index register by 1
 void test_tron_dec() {
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_dec(tron);
+    assertStringNEqual(tron->index_reg, "+000101", tron->word_size, "You can dec two values");
+    tron_free(tron);
 
 }
 //int BRANCH=40 Branch to a specific location in memory, location address is in operand
@@ -228,11 +286,13 @@ void test_tron_branchzero() {
 }
 //int SWAP=43 swap contents of index register and accumulator
 void test_tron_swap() {
-
-}
-//int HALT=45 halt program dump register values and a range of pages. The starting page of the range is stored as the top 2 digits of the operand and the last page as the least significant 2 digits( core dump ).
-void test_tron_halt() {
-
+    struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
+    tron_move(tron, tron->index_reg, "+000102");
+    tron_move(tron, tron->accum, "+111111");
+    tron_swap(tron);
+    assertStringNEqual(tron->index_reg, "+111111", tron->word_size, "You can swap two values");
+    assertStringNEqual(tron->accum, "+000102", tron->word_size, "You can swap two values");
+    tron_free(tron);
 }
 
 void test_tron_add_words(void) {
@@ -240,10 +300,10 @@ void test_tron_add_words(void) {
     char* src1 = "+121212";
     char* src2 = "+343434";
     char buf[7];
-    tron_add_words(tron, src1, src2, buf);
+    tron_add_words(tron, buf, src1, src2);
     assertStringNEqual(buf, "+464646", tron->word_size, "Adding helper function works");
     src2 = "-343434";
-    tron_add_words(tron, src1, src2, buf);
+    tron_add_words(tron, buf, src1, src2);
     assertStringNEqual(buf, "-222222", tron->word_size, "You can add a positive and negative to get a negative");
 }
 
@@ -282,20 +342,19 @@ void test_tron_instructions(void) {
     test_tron_store();
     test_tron_storeidx();
     test_tron_add();
-    //test_tron_addx();
-    //test_tron_subtract();
-    //test_tron_subtractx();
-    //tron_tron_divide();
-    //test_tron_dividex();
-    //test_tron_multiply();
-    //test_tron_multiplyx();
-    //test_tron_inc();
-    //test_tron_dec();
-    //test_tron_branch();
-    //test_tron_branchneg();
-    //test_tron_branchzero();
-    //test_tron_swap();
-    //test_tron_halt();
+    test_tron_addx();
+    test_tron_subtract();
+    test_tron_subtractx();
+    tron_tron_divide();
+    test_tron_dividex();
+    test_tron_multiply();
+    test_tron_multiplyx();
+    test_tron_inc();
+    test_tron_dec();
+    test_tron_branch();
+    test_tron_branchneg();
+    test_tron_branchzero();
+    test_tron_swap();
 }
 
 int main(void) {

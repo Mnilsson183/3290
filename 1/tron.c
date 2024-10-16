@@ -9,8 +9,6 @@
 
 #define INT_LENGTH(x) ((x) == 0 ? 1 : (int)(log10(abs(x)) + 1))
 
-#define OP(op, i1, i2) i1 op i2
-
 void tron_handle_error(struct simpletron* self);
 
 struct simpletron* init_simpletron(const int pages_size, const int words_size, const int word_size) {
@@ -82,12 +80,6 @@ bin int_to_bin(int val, int* size) {
 	return ints;
 }
 
-hex bin_to_hex(int* bin, int bin_size) {
-	int hex_size = bin_size % 4;
-	char* hex = malloc(sizeof(char) * hex_size);
-}
-
-
 void tron_move(struct simpletron* self, unsigned char* dest, const unsigned char* src) {
 	for (int i = 0; i < self->word_size; i++) {
 		dest[i] = src[i];
@@ -143,6 +135,7 @@ void load_instr_set(struct simpletron* self, const char* filename) {
 	self->instr_counter = 0;
 	while(fgets(buf, sizeof(buf), f)) {
 		tron_move(self, &self->memory[self->instr_counter / 100][self->instr_counter % 100], (unsigned char*)buf);
+		self->instr_counter++;
 	}
 }
 
@@ -202,25 +195,25 @@ void exec_inst(struct simpletron* self, unsigned char* instr) {
 	if (self->status_msg != TRON_OK) tron_handle_error(self);
 }
 
-unsigned char* tron_add_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+unsigned char* tron_add_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
 	int i1 = char_to_int_n(c1, self->word_size);
 	int i2 = char_to_int_n(c2, self->word_size);
-	int res = OP(+, i1, i2);
+	int res = i1 + i2;
 	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
-unsigned char* tron_sub_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+unsigned char* tron_sub_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
 	int i1 = char_to_int_n(c1, self->word_size);
 	int i2 = char_to_int_n(c2, self->word_size);
-	int res = OP(-, i1, i2);
+	int res = i1 - i2;
 	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
-unsigned char* tron_mul_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+unsigned char* tron_mul_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
 	int i1 = char_to_int_n(c1, self->word_size);
 	int i2 = char_to_int_n(c2, self->word_size);
-	int res = OP(*, i1, i2);
+	int res = i1 * i2;
 	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
-unsigned char* tron_mod_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+unsigned char* tron_mod_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
 	int i1 = char_to_int_n(c1, self->word_size);
 	int i2 = char_to_int_n(c2, self->word_size);
 	if (i2 == 0) {
@@ -228,10 +221,10 @@ unsigned char* tron_mod_words(struct simpletron* self, unsigned char* c1, unsign
 		self->status_msg = "Divide by zero";
 		return NULL;
 	}
-	int res = OP(%, i1, i2);
+	int res = i1 % i2;
 	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
-unsigned char* tron_div_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d) {
+unsigned char* tron_div_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
 	int i1 = char_to_int_n(c1, self->word_size);
 	int i2 = char_to_int_n(c2, self->word_size);
 	if (i2 == 0) {
@@ -239,25 +232,33 @@ unsigned char* tron_div_words(struct simpletron* self, unsigned char* c1, unsign
 		self->status_msg = "Divide by zero";
 		return NULL;
 	}
-	int res = OP(/, i1, i2);
+	int res = i1 / i2;
 	return int_to_chars_known_size(res, INT_LENGTH(res), d, self->word_size);
 }
 
 void tron_print_mem_loc(struct simpletron* self, unsigned char* val) {
 	for (int i = 0; i < self->word_size; i++) {
 		if (i == 0 && val[i] == '+') continue;
-		printf("%c", val[0]);
+		if (val[i] == 0) printf("0");
+		else printf("%c", val[i]);
 	}
+	printf(" ");
 }
 
 
 void tron_dump_page(struct simpletron* self, int n) {
+	printf("\nPage: %d\n", n);
 	for (int i = 0; i < self->pages_size; i++) {
-		tron_print_mem_loc(self, self->memory[n]);
+		tron_print_mem_loc(self, &self->memory[n][i]);
+		if (i % 10 == 0) printf("\n");
 	}
 }
 
 void tron_dump(struct simpletron* self) {
+	printf("Accum: ");
+	tron_print_mem_loc(self, self->accum);
+	printf("\nIndex: ");
+	tron_print_mem_loc(self, self->index_reg);
 	for (int i = 0; i < self->pages_size; i++) {
 		tron_dump_page(self, i);
 	}
@@ -324,58 +325,58 @@ void tron_storeidx(struct simpletron* self) {
 }
 //int ADD=30 Add the word in memory whose address is the operand to the accumulator and leave result in accumulator ( ACC += MEM )
 void tron_add(struct simpletron* self) {
-	int i1 = char_to_int_n(self->accum, self->word_size);
-	int i2 = char_to_int_n(tron_get_from_word(self, self->operand), self->word_size);
-	tron_add_words(self, tron_get_from_word(self, self->operand), self->accum, self->accum);
+	tron_add_words(self, self->accum, tron_get_from_word(self, self->operand), self->accum);
 }
 //int ADDX=31 Add a word in memory whose address is stored in index register to the accumulator and leave result in accumulator
 void tron_addx(struct simpletron* self) {
-
+	tron_add_words(self, self->accum, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 }
 //int SUBTRACT=32 Subtract a word whose address stored in the operand from the accumulator and leave result in accumulator ( ACC -= MEM )
 void tron_subtract(struct simpletron* self) {
-
+	tron_sub_words(self, self->accum, tron_get_from_word(self, self->operand), self->accum);
 }
 //int SUBTRACTX=33 Subtract a word whose address is stored in the index register from the accumulator and leave result in accumulator
 void tron_subtractx(struct simpletron* self) {
-
+	tron_sub_words(self, self->accum, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 }
 //int DIVIDE=34 Divide the accumulator by a word whose address stored in the operand and leave result in accumulator and lose the remainder.( ACC /= MEM )
 void tron_divide(struct simpletron* self) {
-
+	tron_div_words(self, self->accum, tron_get_from_word(self, self->operand), self->accum);
 }
 //int DIVIDEX=35 Divide the accumulator by a word whose address is stored in the index register and leave result in accumulator and lose the remainder.
 void tron_dividex(struct simpletron* self) {
-
+	tron_div_words(self, self->accum, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 }
 //int MULTIPLY=36 Multiply the accumulator by a word from a specific location in memory and leave result in accumulator ( ACC *= MEM )
 void tron_multiply(struct simpletron* self) {
-
+	tron_mul_words(self, self->accum, tron_get_from_word(self, self->operand), self->accum);
 }
 //int MULTIPLYX=37 Multiply the accumulator by a word whose address is stored in the index register and leave result in accumulator
 void tron_multiplyx(struct simpletron* self) {
+	tron_mul_words(self, self->accum, tron_get_from_word(self, &self->index_reg[3]), self->accum);
 
 }
 //int INC=38 increase index register by 1
 void tron_inc(struct simpletron* self) {
-
+	tron_add_words(self, self->index_reg, self->index_reg, (unsigned char*)"+000001");
 }
 //int DEC=39 decrease index register by 1
 void tron_dec(struct simpletron* self) {
+	tron_add_words(self, self->index_reg, self->index_reg, (unsigned char*)"-000001");
 
 }
-//int BRANCH=40 Branch to a specific location in memory, location address is in operand
-void tron_branch(struct simpletron* self) {
-
-}
-//int BRANCHNEG=41 Branch to a specific location in memory if accumulator is negative
-void tron_branchneg(struct simpletron* self) {
-
-}
-//int BRANCHZERO=42 Branch to a specific location in memory if the accumulator is zero
-void tron_branchzero(struct simpletron* self) {
-
-}
+////int BRANCH=40 Branch to a specific location in memory, location address is in operand
+//void tron_branch(struct simpletron* self) {
+//
+//}
+////int BRANCHNEG=41 Branch to a specific location in memory if accumulator is negative
+//void tron_branchneg(struct simpletron* self) {
+//
+//}
+////int BRANCHZERO=42 Branch to a specific location in memory if the accumulator is zero
+//void tron_branchzero(struct simpletron* self) {
+//
+//}
 //int SWAP=43 swap contents of index register and accumulator
 void tron_swap(struct simpletron* self) {
 	unsigned char* tmp = malloc(sizeof(unsigned char) * 7);

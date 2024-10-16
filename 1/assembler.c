@@ -2,9 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-struct parsedLine {
-    
-};
 
 char* convert(const char[] instrBuf, const char[] destBuf, const char[] srcBuf1, const char[] srcBuf2) {
     if (!strcmp("mov", ))

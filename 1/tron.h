@@ -90,8 +90,10 @@ void parse_instruct(struct simpletron* self, unsigned char* instruct);
 int char_to_int_n(unsigned char* chars, int size);
 unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* dest, int dest_size);
 unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg);
+void load_instr_set(struct simpletron* self, const char* filename);
+void tron_dump(struct simpletron* self);
 
-void tron_read(struct simpletron* self);
+void tron_write(struct simpletron* self);
 void tron_load(struct simpletron* self);
 void tron_loadim(struct simpletron* self);
 void tron_loadx(struct simpletron* self);
@@ -102,11 +104,21 @@ void tron_add(struct simpletron* self);
 void tron_addx(struct simpletron* self);
 void tron_subtract(struct simpletron* self);
 void tron_subtractx(struct simpletron* self);
+void tron_divide(struct simpletron* self);
+void tron_dividex(struct simpletron* self);
+void tron_multiply(struct simpletron* self);
+void tron_multiplyx(struct simpletron* self);
+void tron_inc(struct simpletron* self);
+void tron_dec(struct simpletron* self);
+void tron_branch(struct simpletron* self);
+void tron_branchneg(struct simpletron* self);
+void tron_branchzero(struct simpletron* self);
+void tron_swap(struct simpletron* self);
+void tron_halt(struct simpletron* self);
 
-unsigned char* tron_add_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
-unsigned char* tron_sub_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
-unsigned char* tron_mul_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
-unsigned char* tron_mod_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
-unsigned char* tron_div_words(struct simpletron* self, unsigned char* c1, unsigned char* c2, unsigned char* d);
-
+unsigned char* tron_add_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_sub_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_mul_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_mod_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_div_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
 #endif
