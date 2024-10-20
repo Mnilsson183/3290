@@ -7,7 +7,7 @@
 
 int main(void) {
 	struct simpletron* tron = init_simpletron(DEFAULT_PAGES_SIZE, DEFAULT_WORDS_SIZE, DEFAULT_WORD_SIZE);
-	load_instr_set(tron, "in.smpl");
+	tron_run(tron, "in.smpl");
 	tron_move_n(tron->operand, (unsigned char*)"0002", 4);
 	tron_halt(tron);
 	tron_free(tron);

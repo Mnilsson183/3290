@@ -9,6 +9,7 @@ typedef unsigned char* size_2_reg;
 typedef unsigned char* size_4_reg;
 typedef unsigned char* size_word_reg;
 typedef unsigned char* size_loc_reg;
+typedef unsigned char* size_instruct;
 
 typedef u_int8_t* bin;
 typedef char* hex;
@@ -92,6 +93,7 @@ unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* des
 unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg);
 void load_instr_set(struct simpletron* self, const char* filename);
 void tron_dump(struct simpletron* self);
+void tron_run(struct simpletron* self, const char* filename);
 
 void tron_write(struct simpletron* self);
 void tron_load(struct simpletron* self);

@@ -5,6 +5,8 @@
 #include <sys/_types/_u_int8_t.h>
 #include <sys/_types/_uid_t.h>
 #include <math.h>
+#include <strings.h>
+#include <string.h>
 #include "tron.h"
 
 #define INT_LENGTH(x) ((x) == 0 ? 1 : (int)(log10(abs(x)) + 1))
@@ -131,15 +133,20 @@ void tron_resize_unsigned_to_signed(unsigned char* dest, const unsigned char* sr
 void load_instr_set(struct simpletron* self, const char* filename) {
 	if (filename == NULL) return;
 	FILE* f = fopen(filename, "r");
-	char buf[7];
+	char buf[8];
+	buf[0] = 0;
 	self->instr_counter = 0;
-	while(fgets(buf, sizeof(buf), f)) {
-		tron_move(self, &self->memory[self->instr_counter / 100][self->instr_counter % 100], (unsigned char*)buf);
+	while(fgets(&buf[1], sizeof(buf)-1, f)) {
+		fgetc(f);		// remove the newline char
+		memmove(&self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size], (unsigned char*)buf, 7);
 		self->instr_counter++;
 	}
+	// write the end of the instruction indicator
+	memcpy(&self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size], "9999999", 7);
+	self->instr_counter = 0;
 }
 
-void parse_instruct(struct simpletron* self, unsigned char instruct[]) {
+void parse_instruct(struct simpletron* self, size_instruct instruct) {
 	// first 2 op code
 	self->opCode[0] = instruct[0];
 	self->opCode[1] = instruct[1];
@@ -189,10 +196,18 @@ unsigned char* tron_get_from_oper(struct simpletron* self) {
 
 void exec_inst(struct simpletron* self, unsigned char* instr) {
 	parse_instruct(self, instr);
-	//switch ((SMPL_ACTION)char_to_int_n(self->opCode[0], 2)) {
-	//
-	//}
+	switch ((SMPL_ACTION)char_to_int_n(self->opCode[0], 2)) {
+		case 
+	
+	}
 	if (self->status_msg != TRON_OK) tron_handle_error(self);
+}
+
+void tron_run(struct simpletron* self, const char* filename) {
+	load_instr_set(self, filename);
+	while (!memcmp(&self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size], "9999999", self->word_size)){
+		exec_inst(self, &self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size]);
+	}
 }
 
 unsigned char* tron_add_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2) {
@@ -238,19 +253,18 @@ unsigned char* tron_div_words(struct simpletron* self, unsigned char* d, unsigne
 
 void tron_print_mem_loc(struct simpletron* self, unsigned char* val) {
 	for (int i = 0; i < self->word_size; i++) {
-		if (i == 0 && val[i] == '+') continue;
 		if (val[i] == 0) printf("0");
-		else printf("%c", val[i]);
+		else printf("%d", val[i]-48);
 	}
 	printf(" ");
 }
 
 
 void tron_dump_page(struct simpletron* self, int n) {
-	printf("\nPage: %d\n", n);
+	printf("\n\nPage: %d", n);
 	for (int i = 0; i < self->pages_size; i++) {
-		tron_print_mem_loc(self, &self->memory[n][i]);
 		if (i % 10 == 0) printf("\n");
+		tron_print_mem_loc(self, &self->memory[n][i * self->word_size]);
 	}
 }
 
@@ -262,6 +276,7 @@ void tron_dump(struct simpletron* self) {
 	for (int i = 0; i < self->pages_size; i++) {
 		tron_dump_page(self, i);
 	}
+	printf("\n");
 }
 
 void tron_terminate(const char* msg, int errorCode, struct simpletron* tron) {
