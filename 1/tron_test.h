@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <sys/_types/_u_int16_t.h>
 #include <sys/_types/_u_int8_t.h>
@@ -11,13 +12,17 @@ typedef unsigned char* size_word_reg;
 typedef unsigned char* size_loc_reg;
 typedef unsigned char* size_instruct;
 
-typedef enum {
+typedef u_int8_t* bin;
+typedef char* hex;
+
+typedef enum{
 	TRON_OK,
 	TRON_FATAL_ERROR,
 	TRON_WARNING,
 	TRON_RECOVERABLE_ERROR,
 } Simpletron_status;
 
+// pages 0 + 1 are instruction memory
 struct simpletron {
 	size_word_reg* memory;
 	u_int8_t pages_size;
@@ -73,17 +78,23 @@ typedef  enum {
 	ACTION_BRANCHNEG,
 	ACTION_BRANCHZERO,
 	ACTION_SWAP,
-	ACTION_HALT = 45,
+	ACTION_HALT,
 	ACTION_UNKNOWN
 } SMPL_ACTION;
 
 struct simpletron* init_simpletron(const int pages_size, const int words_size, const int word_size);
 void tron_free(struct simpletron* self);
 void tron_move(struct simpletron* self, unsigned char* dest, const unsigned char* src);
+void tron_move_n(unsigned char* dest, const unsigned char* src, const int n);
+void tron_resize_value(unsigned char* dest, const unsigned char* src, const int current_size, const int new_size);
+void tron_resize_unsigned_to_signed(unsigned char* dest, const unsigned char* src, const int current_size, const int new_size);
+void parse_instruct(struct simpletron* self, unsigned char* instruct);
+int char_to_int_n(unsigned char* chars, int size);
+unsigned char* int_to_chars_known_size(int val, int val_size, unsigned char* dest, int dest_size);
+unsigned char* tron_get_from_word(struct simpletron* self, size_loc_reg reg);
+void load_instr_set(struct simpletron* self, const char* filename);
 void tron_dump(struct simpletron* self);
-void tron_dump_page(struct simpletron* self, int n);
 void tron_run(struct simpletron* self, const char* filename);
-void tron_print_mem_loc(struct simpletron* self, unsigned char* val);
 
 void tron_write(struct simpletron* self);
 void tron_load(struct simpletron* self);
@@ -102,9 +113,15 @@ void tron_multiply(struct simpletron* self);
 void tron_multiplyx(struct simpletron* self);
 void tron_inc(struct simpletron* self);
 void tron_dec(struct simpletron* self);
-void tron_swap(struct simpletron* self);
-void tron_halt(struct simpletron* self);
 void tron_branch(struct simpletron* self);
 void tron_branchneg(struct simpletron* self);
 void tron_branchzero(struct simpletron* self);
+void tron_swap(struct simpletron* self);
+void tron_halt(struct simpletron* self);
+
+unsigned char* tron_add_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_sub_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_mul_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_mod_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
+unsigned char* tron_div_words(struct simpletron* self, unsigned char* d, unsigned char* c1, unsigned char* c2);
 #endif

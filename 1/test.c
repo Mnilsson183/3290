@@ -1,5 +1,5 @@
 #include "assert.h"
-#include "tron.h"
+#include "tron_test.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -41,11 +41,19 @@ void test_tron_resize_value() {
 void test_tron_resize_unsigned_to_signed(void) {
     printTestingSegment("Resize unsigned to signed");
 
-    unsigned char* src = (unsigned char*)"234";
     unsigned char dest[7];
+
+    unsigned char* src = (unsigned char*)"234";
     tron_resize_unsigned_to_signed(dest, src, 3, 7);
     assertStringNEqual((const char*)dest, "+000234", 7,"Resizing a value that has no sign");
 
+    src = (unsigned char*)"123234";
+    tron_resize_unsigned_to_signed(dest, src, 6, 7);
+    assertStringNEqual((const char*)dest, "+123234", 7,"Resizing a value that has no sign");
+
+    src = (unsigned char*)"9876";
+    tron_resize_unsigned_to_signed(dest, src, 4, 7);
+    assertStringNEqual((const char*)dest, "+009876", 7,"Resizing a value that has no sign");
 }
 
 void test_parse_instruct(void) {
@@ -55,6 +63,13 @@ void test_parse_instruct(void) {
     assertStringNEqual((char *)tron->opCode, "10", 2, "Parsing Instruction can parse the opcode");
     assertStringNEqual((char *)tron->operand, "1221", 4, "Parsing Instruction can parse the operand");
 
+    parse_instruct(tron, (unsigned char*)"123456");
+    assertStringNEqual((char *)tron->opCode, "12", 2, "Parsing Instruction can parse the opcode");
+    assertStringNEqual((char *)tron->operand, "3456", 4, "Parsing Instruction can parse the operand");
+
+    parse_instruct(tron, (unsigned char*)"450002");
+    assertStringNEqual((char *)tron->opCode, "45", 2, "Parsing Instruction can parse the opcode");
+    assertStringNEqual((char *)tron->operand, "0002", 4, "Parsing Instruction can parse the operand");
     tron_free(tron);
 }
 
@@ -72,6 +87,8 @@ void test_char_to_int_n(void) {
     val = char_to_int_n((unsigned char *)"-003456", 7);
     assertEquals(-3456, val, "Convert negative chars to an Int with leading zeros");
 
+    val = char_to_int_n((unsigned char *)"45", 2);
+    assertEquals(45, val, "Convert Unisgned chars to an Int with leading zeros");
 }
 
 void test_int_to_chars_known_size(void) {
@@ -115,11 +132,18 @@ void test_tron_load(void) {
 //int LOADIM=21 Load the operand into the accumulator
 void test_tron_loadim() {
     struct simpletron* tron = init_simpletron(TEST_PAGES_SIZE, TEST_WORDS_SIZE, TEST_WORD_SIZE);
-    unsigned char* word = (unsigned char*)"0102";
+    unsigned char* word = (unsigned char*)"9876";
+    // load loc into operand
+    tron_move_n(tron->operand, word, 4);
+    tron_loadim(tron);
+    assertStringNEqual(tron->accum, "+009876", 7, "LOADIM instruction");
+
+    word = (unsigned char*)"0102";
     // load loc into operand
     tron_move_n(tron->operand, word, 4);
     tron_loadim(tron);
     assertStringNEqual(tron->accum, "+000102", 7, "LOADIM instruction");
+
     tron_free(tron);
 }
 //int LOADX=22 Load word from the memory location specified by the operand into the index register

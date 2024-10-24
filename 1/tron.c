@@ -65,27 +65,17 @@ int tron_get_flag(struct simpletron* self, int flag) {
 	return self->flags & 1 << flag;
 }
 
-bin int_to_bin(int val, int* size) {
-	int buf[256];
-	u_int8_t idx = 0;
-	if (val < 0) return NULL;
-	while(val != 0) {
-		buf[idx] = val % 2;
-		val = val / 2;
-		idx++;
-	}
-	u_int8_t* ints = malloc(sizeof(u_int8_t) * idx);
-	for (int i = idx; i >= 0; i--) {
-		ints[i] = buf[idx - i];
-	}
-	*size = idx;
-	return ints;
-}
-
 void tron_move(struct simpletron* self, unsigned char* dest, const unsigned char* src) {
 	for (int i = 0; i < self->word_size; i++) {
 		dest[i] = src[i];
 	}
+}
+
+int tron_mem_equal(const unsigned char* s1, const char* s2, int n) {
+	for (int i = 0; i < n; i++) {
+		if (s1[i] != s2[i]) return 0;
+	}
+	return 1;
 }
 
 // intended to move into the operand and op code
@@ -125,7 +115,6 @@ void tron_resize_unsigned_to_signed(unsigned char* dest, const unsigned char* sr
 		for (int i = 0; i < current_size; i++) {
 			dest[idx] = src[i];
 			idx++;
-
 		}
 	}
 }
@@ -159,7 +148,8 @@ void parse_instruct(struct simpletron* self, size_instruct instruct) {
 
 int char_to_int_n(unsigned char* chars, int size) {
 	int sum = 0;
-	for (int i = 1; i < size; i++) {
+	int i = chars[0] == '-' || chars[0] == '+' ? 1 : 0;
+	for (; i < size; i++) {
 		sum += (chars[i] - 48) * pow(10, size - i - 1);
 	}
 	if (chars[0] == '-') return -1 * sum;
@@ -195,18 +185,75 @@ unsigned char* tron_get_from_oper(struct simpletron* self) {
 }
 
 void exec_inst(struct simpletron* self, unsigned char* instr) {
-	parse_instruct(self, instr);
-	switch ((SMPL_ACTION)char_to_int_n(self->opCode[0], 2)) {
-		case 
-	
+	parse_instruct(self, &instr[1]);
+	switch ((SMPL_ACTION)char_to_int_n(self->opCode, 2)) {
+		case ACTION_READ:
+			// TODO
+			break;
+		case ACTION_WRITE:
+			return tron_write(self);
+
+		case ACTION_LOAD:
+			return tron_load(self);
+		case ACTION_LOADIM:
+			return tron_loadim(self);
+		case ACTION_LOADX:
+			return tron_loadx(self);
+		case ACTION_LOADIDX:
+			return tron_loadidx(self);
+
+		case ACTION_STORE:
+			return tron_store(self);
+		case ACTION_STOREIDX:
+			return tron_storeidx(self);
+		
+		case ACTION_ADD:
+			return tron_add(self);
+		case ACTION_ADDX:
+			return tron_addx(self);
+		
+		case ACTION_SUBTRACT:
+			return tron_subtract(self);
+		case ACTION_SUBTRACTX:
+			return tron_subtractx(self);
+
+		case ACTION_DIVIDE:
+			return tron_divide(self);
+		case ACTION_DIVIDEX:
+			return tron_dividex(self);
+
+		case ACTION_MULTIPLY:
+			return tron_multiply(self);
+		case ACTION_MULTIPLYX:
+			return tron_multiplyx(self);
+
+		case ACTION_INC:
+			return tron_inc(self);
+		case ACTION_DEC:
+			return tron_dec(self);
+
+		case ACTION_BRANCH:
+			return tron_branch(self);
+		case ACTION_BRANCHNEG:
+			return tron_branchneg(self);
+		case ACTION_BRANCHZERO:
+			return tron_branchzero(self);
+		
+		case ACTION_SWAP:
+			return tron_swap(self);
+		case ACTION_HALT:
+			return tron_halt(self);
+		case ACTION_UNKNOWN:
+			tron_handle_error(self);
 	}
 	if (self->status_msg != TRON_OK) tron_handle_error(self);
 }
 
 void tron_run(struct simpletron* self, const char* filename) {
 	load_instr_set(self, filename);
-	while (!memcmp(&self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size], "9999999", self->word_size)){
+	while (!tron_mem_equal(&self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size], "9999999", self->word_size)) {
 		exec_inst(self, &self->memory[self->instr_counter / 100][(self->instr_counter % 100) * self->word_size]);
+		self->instr_counter++;
 	}
 }
 
@@ -253,12 +300,21 @@ unsigned char* tron_div_words(struct simpletron* self, unsigned char* d, unsigne
 
 void tron_print_mem_loc(struct simpletron* self, unsigned char* val) {
 	for (int i = 0; i < self->word_size; i++) {
-		if (val[i] == 0) printf("0");
+		if (val[0] == '-' || val[0] == '+') printf("%c", val[i]);
+		else if (val[i] == 0) printf("0");
 		else printf("%d", val[i]-48);
 	}
 	printf(" ");
 }
 
+void tron_print_mem_loc_n(unsigned char* val, int n) {
+	for (int i = 0; i < n; i++) {
+		if (val[0] == '-' || val[0] == '+') printf("%c", val[i]);
+		else if (val[i] == 0) printf("0");
+		else printf("%d", val[i]-48);
+	}
+	printf(" ");
+}
 
 void tron_dump_page(struct simpletron* self, int n) {
 	printf("\n\nPage: %d", n);
@@ -318,7 +374,6 @@ void tron_load(struct simpletron* self) {
 }
 //int LOADIM=21 Load the operand into the accumulator
 void tron_loadim(struct simpletron* self) {
-	tron_move(self, self->accum, self->operand);
 	tron_resize_unsigned_to_signed(self->accum, self->operand, 4, self->word_size);
 }
 //int LOADX=22 Load word from the memory location specified by the operand into the index register
@@ -380,18 +435,17 @@ void tron_dec(struct simpletron* self) {
 	tron_add_words(self, self->index_reg, self->index_reg, (unsigned char*)"-000001");
 
 }
-////int BRANCH=40 Branch to a specific location in memory, location address is in operand
-//void tron_branch(struct simpletron* self) {
-//
-//}
-////int BRANCHNEG=41 Branch to a specific location in memory if accumulator is negative
-//void tron_branchneg(struct simpletron* self) {
-//
-//}
-////int BRANCHZERO=42 Branch to a specific location in memory if the accumulator is zero
-//void tron_branchzero(struct simpletron* self) {
-//
-//}
+//int BRANCH=40 Branch to a specific location in memory, location address is in operand
+void tron_branch(struct simpletron* self) {
+}
+//int BRANCHNEG=41 Branch to a specific location in memory if accumulator is negative
+void tron_branchneg(struct simpletron* self) {
+
+}
+//int BRANCHZERO=42 Branch to a specific location in memory if the accumulator is zero
+void tron_branchzero(struct simpletron* self) {
+
+}
 //int SWAP=43 swap contents of index register and accumulator
 void tron_swap(struct simpletron* self) {
 	unsigned char* tmp = malloc(sizeof(unsigned char) * 7);
@@ -401,6 +455,19 @@ void tron_swap(struct simpletron* self) {
 }
 //int HALT=45 halt program dump register values and a range of pages. The starting page of the range is stored as the top 2 digits of the operand and the last page as the least significant 2 digits( core dump ).
 void tron_halt(struct simpletron* self) {
+	printf("\nopCode: ");
+	tron_print_mem_loc_n(self->opCode, 2);
+
+	printf("	operand: ");
+	tron_print_mem_loc_n(self->operand, 4);
+
+	printf("\nAcc: ");
+	tron_print_mem_loc(self, self->accum);
+
+	printf("	idx: ");
+	tron_print_mem_loc(self, self->index_reg);
+
+	printf("\n");
 	int low = char_to_int_n(&self->operand[0], 2);
 	int high = char_to_int_n(&self->operand[2], 2);
 	for (int i = low; i < high + 1; i++) {
